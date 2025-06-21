@@ -1,36 +1,53 @@
-import { Button, Input } from '@/components/common';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
-import styles from './styles';
-
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Chat: undefined;
-};
-
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
+import { Button, Input } from "@/components/common";
+import { LoginScreenNavigationProp } from "@/navigator/navigation";
+import { useNavigation } from "@react-navigation/native";
+import React, { useState } from "react";
+import { Alert, Image, Text, View } from "react-native";
+import { login } from "../../api/auth.api";
+import { Login } from "../../types/auth.types";
+import styles from "./styles";
 
 const LoginScreen: React.FC = () => {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [form, setForm] = useState<Login>({ email: "", password: "" });
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
-  // Placeholder for login action
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      return Alert.alert('Error', 'Please fill in all fields');
+  // Update form field
+  const handleChange = (field: keyof Login, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogin = async () => {
+    if (!form.email.trim() || !form.password.trim()) {
+      return Alert.alert("Error", "Please fill in all fields");
     }
-    Alert.alert('Success', 'Login button pressed'); // Thay bằng logic API sau
+
+    try {
+      const response = await login({
+        email: form.email,
+        password: form.password,
+      });
+
+      const user = response.user;
+      console.log("Login success:", user);
+
+      Alert.alert("Success", "Logged in successfully");
+
+      // TODO: Điều hướng sang trang chính nếu cần
+      // navigation.navigate("Home");
+    } catch (error: any) {
+      console.error("Login error:", error.response?.data || error.message);
+      Alert.alert(
+        "Login failed",
+        error.response?.data?.message || "Invalid credentials"
+      );
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={{ uri: 'https://via.placeholder.com/100' }} // Thay bằng logo thực tế
+        source={{ uri: "https://via.placeholder.com/100" }} // Thay bằng logo thực tế
         style={styles.logo}
       />
       {/* Title and subtitle */}
@@ -40,14 +57,14 @@ const LoginScreen: React.FC = () => {
       {/* Form */}
       <Input
         placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
+        value={form.email}
+        onChangeText={(value) => handleChange("email", value)}
         keyboardType="email-address"
       />
       <Input
         placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
+        value={form.password}
+        onChangeText={(value) => handleChange("password", value)}
         secureTextEntry
       />
 
@@ -55,11 +72,11 @@ const LoginScreen: React.FC = () => {
       <Button
         title="Login"
         onPress={handleLogin}
-        disabled={!email.trim() || !password.trim()}
+        disabled={!form.email.trim() || !form.password.trim()}
       />
       <Button
         title="Don't have an account? Register"
-        onPress={() => navigation.navigate('Register')}
+        onPress={() => navigation.navigate("Register")}
         variant="secondary"
       />
     </View>

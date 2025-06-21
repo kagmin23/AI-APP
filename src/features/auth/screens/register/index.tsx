@@ -1,36 +1,55 @@
-import { Button, Input } from '@/components/common';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
-import styles from './styles';
-
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Chat: undefined;
-};
-
-type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
+import { Button, Input } from "@/components/common";
+import { RegisterScreenNavigationProp } from "@/navigator/navigation";
+import { useNavigation } from "@react-navigation/native";
+import React, { useState } from "react";
+import { Alert, Image, Text, View } from "react-native";
+import { register } from "../../api/auth.api";
+import { Register } from "../../types/auth.types";
+import styles from "./styles";
 
 const RegisterScreen: React.FC = () => {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [form, setForm] = useState<Register>({ email: "", password: "", name: "" });
   const navigation = useNavigation<RegisterScreenNavigationProp>();
 
-  // Placeholder for register action
-  const handleRegister = () => {
-    if (!email.trim() || !password.trim()) {
-      return Alert.alert('Error', 'Please fill in all fields');
-    }
-    Alert.alert('Success', 'Register button pressed'); // Thay bằng logic API sau
+  // Update form field
+  const handleChange = (field: keyof Register, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+const handleRegister = async () => {
+  if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+    return Alert.alert("Error", "Please fill in all fields");
+  }
+
+  try {
+    const response = await register({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+    });
+
+    console.log("Register success:", response.user);
+
+    Alert.alert("Success", "Account created successfully", [
+      {
+        text: "OK",
+        onPress: () => navigation.navigate("Login"),
+      },
+    ]);
+  } catch (error: any) {
+    console.error("Register error:", error.response?.data || error.message);
+    Alert.alert(
+      "Register failed",
+      error.response?.data?.message || "Something went wrong"
+    );
+  }
+};
 
   return (
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={{ uri: 'https://via.placeholder.com/100' }} // Thay bằng logo thực tế
+        source={{ uri: "https://via.placeholder.com/100" }} // Thay bằng logo thực tế
         style={styles.logo}
       />
       {/* Title and subtitle */}
@@ -39,15 +58,21 @@ const RegisterScreen: React.FC = () => {
 
       {/* Form */}
       <Input
+        placeholder="Your Name"
+        value={form.name}
+        onChangeText={(value) => handleChange("name", value)}
+        keyboardType="default"
+      />
+      <Input
         placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
+        value={form.email}
+        onChangeText={(value) => handleChange("email", value)}
         keyboardType="email-address"
       />
       <Input
         placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
+        value={form.password}
+        onChangeText={(value) => handleChange("password", value)}
         secureTextEntry
       />
 
@@ -55,11 +80,11 @@ const RegisterScreen: React.FC = () => {
       <Button
         title="Register"
         onPress={handleRegister}
-        disabled={!email.trim() || !password.trim()}
+        disabled={!form.email.trim() || !form.password.trim()}
       />
       <Button
         title="Already have an account? Login"
-        onPress={() => navigation.navigate('Login')}
+        onPress={() => navigation.navigate("Login")}
         variant="secondary"
       />
     </View>
