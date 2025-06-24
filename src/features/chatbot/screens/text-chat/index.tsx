@@ -1,15 +1,24 @@
-import { API_BASE_URL } from '@/config/env'; // Thay đổi import từ @env sang @/config/env
-import { RootStackParamList, TextChatScreenNavigationProp } from '@/navigations/types';
-import { RouteProp } from '@react-navigation/native';
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
-import styles from './styles';
-
-type Props = {
-  navigation: TextChatScreenNavigationProp;
-  route: RouteProp<RootStackParamList, 'TextChat'>;
-};
+import { API_BASE_URL } from "@/config/env";
+import { MainTabParamList } from "@/navigations/types";
+import { Ionicons } from "@expo/vector-icons";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Toast from "react-native-toast-message";
+import styles from "./styles";
 
 type ChatItem = {
   id: string;
@@ -17,11 +26,12 @@ type ChatItem = {
   response: string;
 };
 
-const TextChatScreen: React.FC<Props> = ({ navigation }) => {
-  const [input, setInput] = useState('');
+const TextChatScreen: React.FC = () => {
+  const [input, setInput] = useState("");
   const [history, setHistory] = useState<ChatItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [sending, setSending] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   useEffect(() => {
     fetchHistory();
@@ -30,15 +40,14 @@ const TextChatScreen: React.FC<Props> = ({ navigation }) => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Đang tải lịch sử chat từ:', `${API_BASE_URL}/text-to-text`);
-      
       const response = await axios.get(`${API_BASE_URL}/text-to-text`);
       setHistory(response.data);
-      
-      console.log('✅ Tải lịch sử thành công:', response.data.length, 'tin nhắn');
     } catch (error) {
-      console.error('❌ Lỗi khi tải lịch sử:', error);
-      Alert.alert('Lỗi', 'Không thể tải lịch sử chat. Vui lòng kiểm tra kết nối mạng.');
+      Toast.show({
+        type: "error",
+        text1: "❌ Error loading history",
+        text2: "Please check your network connection.",
+      });
     } finally {
       setLoading(false);
     }
@@ -46,41 +55,33 @@ const TextChatScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleSend = async () => {
     if (!input.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập tin nhắn trước khi gửi.');
+      Toast.show({ type: "info", text1: "Please enter message!" });
       return;
     }
 
     const currentInput = input.trim();
-    
+    setSending(true);
+    setInput("");
+
     try {
-      setSending(true);
-      setInput(''); // Xóa input ngay lập tức để UX tốt hơn
-      
-      console.log('📤 Đang gửi tin nhắn:', currentInput);
-      
-      const response = await axios.post(`${API_BASE_URL}/text-to-text`, { 
-        prompt: currentInput 
-      }, {
-        timeout: 30000, // Timeout 30 giây
+      const response = await axios.post(`${API_BASE_URL}/text-to-text`, {
+        prompt: currentInput,
       });
 
-      console.log('✅ Nhận được phản hồi từ AI');
-
-      const newChatItem: ChatItem = {
+      const newItem: ChatItem = {
         id: response.data.id,
         prompt: currentInput,
-        response: response.data.result
+        response: response.data.result,
       };
 
-      setHistory(prevHistory => [newChatItem, ...prevHistory]);
-      
+      setHistory((prev) => [newItem, ...prev]);
     } catch (error) {
-      console.error('❌ Lỗi khi gửi tin nhắn:', error);
-      setInput(currentInput); // Khôi phục input nếu có lỗi
-      Alert.alert(
-        'Lỗi', 
-        'Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối mạng và thử lại.'
-      );
+      Toast.show({
+        type: "error",
+        text1: "Unable to send message",
+        text2: "Please try again later.",
+      });
+      setInput(currentInput);
     } finally {
       setSending(false);
     }
@@ -88,110 +89,87 @@ const TextChatScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log('🗑️ Đang xóa tin nhắn:', id);
-      
       await axios.delete(`${API_BASE_URL}/text-to-text/${id}`);
-      setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
-      
-      console.log('✅ Xóa tin nhắn thành công');
-      Alert.alert('Thành công', 'Đã xóa tin nhắn khỏi lịch sử.');
-      
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      Toast.show({ type: "success", text1: "Message deleted." });
     } catch (error) {
-      console.error('❌ Lỗi khi xóa tin nhắn:', error);
-      Alert.alert('Lỗi', 'Không thể xóa tin nhắn. Vui lòng thử lại.');
+      Toast.show({
+        type: "error",
+        text1: "Delete failed",
+        text2: "Please try again.",
+      });
     }
   };
 
-  const confirmDelete = (id: string) => {
-    Alert.alert(
-      'Xác nhận xóa',
-      'Bạn có chắc muốn xóa tin nhắn này khỏi lịch sử?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { text: 'Xóa', style: 'destructive', onPress: () => handleDelete(id) }
-      ]
-    );
-  };
+return (
+  <KeyboardAvoidingView
+    style={styles.screen}
+    behavior={Platform.OS === "ios" ? "padding" : undefined}
+  >
+    {/* Gradient Background */}
+    <LinearGradient
+      colors={[
+        "#0a0a0f", // Dark blue-black at top
+        "#1a1a2e", // Deep purple-blue
+        "#16213e", // Dark navy blue
+        "#0f1419", // Very dark blue-gray
+        "#0a0a0f", // Back to dark at bottom
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
 
-  return (
-    <KeyboardAvoidingView 
-      style={styles.screen} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <Text style={styles.title}>AI Text Chat</Text>
-      
-      {/* Input Area */}
-      <View style={styles.inputContainer}>
+    {/* Overlay content */}
+    <View style={styles.overlay}>
+      <Text style={styles.title}>🤖 Chat with AI</Text>
+
+      <FlatList
+        data={history}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingBottom: 100,
+          flexGrow: 1,
+        }}
+        renderItem={({ item }) => (
+          <View style={styles.messageContainer}>
+            {/* Your message rendering here */}
+          </View>
+        )}
+        refreshing={loading}
+        onRefresh={fetchHistory}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Start a conversation with AI ✨</Text>
+          </View>
+        }
+      />
+
+      {/* Input Section */}
+      <View style={styles.inputSection}>
         <TextInput
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Nhập tin nhắn của bạn..."
-          placeholderTextColor="#999"
+          placeholder="Enter your question..."
+          placeholderTextColor="#ccc"
           multiline
-          maxLength={1000}
-          editable={!sending}
         />
-        <Button 
-          title={sending ? "Đang gửi..." : "Gửi"} 
-          onPress={handleSend} 
-          color="#007AFF"
+        <TouchableOpacity
+          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
+          onPress={handleSend}
           disabled={sending || !input.trim()}
-        />
-      </View>
-
-      {sending && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#007AFF" />
-          <Text style={styles.loadingText}>AI đang suy nghĩ...</Text>
-        </View>
-      )}
-      
-      {/* Chat History */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Đang tải lịch sử chat...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={history}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.historyItem}>
-              <View style={styles.promptContainer}>
-                <Text style={styles.promptLabel}>Bạn:</Text>
-                <Text style={styles.prompt}>{item.prompt}</Text>
-              </View>
-              
-              <View style={styles.responseContainer}>
-                <Text style={styles.responseLabel}>AI:</Text>
-                <Text style={styles.response}>{item.response}</Text>
-              </View>
-              
-              <Button 
-                title="Xóa" 
-                onPress={() => confirmDelete(item.id)} 
-                color="#FF3B30" 
-              />
-            </View>
+        >
+          {sending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Ionicons name="send" size={14} color="#fff" />
           )}
-          style={styles.historyList}
-          refreshing={loading}
-          onRefresh={fetchHistory}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                Chưa có cuộc trò chuyện nào.{'\n'}
-                Hãy gửi tin nhắn đầu tiên!
-              </Text>
-            </View>
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </KeyboardAvoidingView>
-  );
-};
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
+);
+}
 
 export default TextChatScreen;

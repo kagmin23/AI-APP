@@ -1,8 +1,12 @@
+// src/navigations/types.ts
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+// Stack Navigator
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  MainTabs: undefined;
   TextChat: undefined;
   TextToImage: undefined;
   ImageToImage: undefined;
@@ -14,27 +18,42 @@ export type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "Login"
 >;
+
 export type RegisterScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "Register"
 >;
-export type TextChatScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+
+// Bottom Tab Navigator
+export type MainTabParamList = {
+  TextChat: undefined;
+  TextToImage: undefined;
+  ImageToImage: undefined;
+  Camera: undefined;
+  Map: undefined;
+};
+
+export type TextChatScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   "TextChat"
 >;
-export type TextToImageScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+
+export type TextToImageScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   "TextToImage"
 >;
-export type ImageToImageScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+
+export type ImageToImageScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   "ImageToImage"
 >;
-export type CameraScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+
+export type CameraScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   "Camera"
 >;
-export type MapScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+
+export type MapScreenNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
   "Map"
 >;

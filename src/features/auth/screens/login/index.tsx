@@ -1,27 +1,26 @@
-// LoginScreen.tsx
 import { RootStackParamList } from "@/navigations/types";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { LinearGradient } from 'expo-linear-gradient'; // or 'react-native-linear-gradient'
+import { LinearGradient } from "expo-linear-gradient"; // or 'react-native-linear-gradient'
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { login } from "../../api/auth.api";
 import styles from "./styles";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-type LoginScreenNavigationProp = NavigationProp<RootStackParamList, 'Login'>;
+type LoginScreenNavigationProp = NavigationProp<RootStackParamList, "Login">;
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,40 +28,53 @@ const LoginScreen: React.FC = () => {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Please fill in all fields");
+      Toast.show({
+        type: "error",
+        text1: "⚠️ Missing information",
+        text2: "Please enter full email and password",
+      });
       return;
     }
 
     setIsLoading(true);
     setLoadingMessage("Connecting to AI network...");
-    
+
     try {
       const response = await login({
         email: email.trim(),
-        password: password.trim()
+        password: password.trim(),
       });
 
       if (response.token) {
-        console.log('Login successful:', response.message);
+        console.log("✅ Login successfully:", response.message);
       }
-      
-      setLoadingMessage("Neural link established! 🚀");
-      
-      setTimeout(() => {
-        navigation.navigate("TextChat");
-      }, 2000);
 
+      setLoadingMessage("Neural link established! 🚀");
+
+      Toast.show({
+        type: "success",
+        text1: "✅ Log in successfully",
+        text2: "Moving to AI Chat...",
+      });
+
+      setTimeout(() => {
+        navigation.navigate("MainTabs");
+      }, 2500);
     } catch (error: any) {
       console.error("Login error:", error);
+
       let message = "Authentication failed";
-      
       if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.message) {
         message = error.message;
       }
-      
-      Alert.alert("Access Denied", message);
+
+      Toast.show({
+        type: "error",
+        text1: "❌ Login failed",
+        text2: message,
+      });
       setIsLoading(false);
     }
   };
@@ -82,11 +94,11 @@ const LoginScreen: React.FC = () => {
   return (
     <LinearGradient
       colors={[
-        '#0a0a0f',      // Dark blue-black at top
-        '#1a1a2e',      // Deep purple-blue
-        '#16213e',      // Dark navy blue
-        '#0f1419',      // Very dark blue-gray
-        '#0a0a0f'       // Back to dark at bottom
+        "#0a0a0f", // Dark blue-black at top
+        "#1a1a2e", // Deep purple-blue
+        "#16213e", // Dark navy blue
+        "#0f1419", // Very dark blue-gray
+        "#0a0a0f", // Back to dark at bottom
       ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -98,7 +110,9 @@ const LoginScreen: React.FC = () => {
         <View style={[styles.titleSection, { opacity: isLoading ? 0.6 : 1 }]}>
           <Text style={styles.welcomeText}>Welcome Back!</Text>
           <Text style={styles.title}>AI Assistant</Text>
-          <Text style={styles.subtitle}>Connect to your intelligent companion</Text>
+          <Text style={styles.subtitle}>
+            Connect to your intelligent companion
+          </Text>
         </View>
       </View>
 
@@ -117,7 +131,7 @@ const LoginScreen: React.FC = () => {
             editable={!isLoading}
           />
         </View>
-        
+
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
           <TextInput
@@ -141,14 +155,18 @@ const LoginScreen: React.FC = () => {
         <View style={styles.loadingSection}>
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#06b6d4" />
-            <Text style={[
-              styles.loadingText,
-              { color: loadingMessage.includes('🚀') ? '#10b981' : '#06b6d4' }
-            ]}>
+            <Text
+              style={[
+                styles.loadingText,
+                {
+                  color: loadingMessage.includes("🚀") ? "#10b981" : "#06b6d4",
+                },
+              ]}
+            >
               {loadingMessage}
             </Text>
           </View>
-          
+
           {/* Animated progress bar */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar} />
@@ -160,20 +178,20 @@ const LoginScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.loginButton,
-              (!email.trim() || !password.trim()) && styles.disabledButton
+              (!email.trim() || !password.trim()) && styles.disabledButton,
             ]}
             onPress={handleLogin}
             disabled={!email.trim() || !password.trim()}
           >
             <Text style={styles.loginButtonText}>Access AI Network</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>New to AI ?</Text>
             <View style={styles.dividerLine} />
           </View>
-          
+
           <TouchableOpacity
             style={styles.registerButton}
             onPress={() => navigation.navigate("Register")}
@@ -185,7 +203,9 @@ const LoginScreen: React.FC = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Powered by Advanced Neural Networks</Text>
+        <Text style={styles.footerText}>
+          Powered by Advanced Neural Networks
+        </Text>
       </View>
     </LinearGradient>
   );

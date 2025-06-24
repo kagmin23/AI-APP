@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Text, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 import { register } from "../../api/auth.api";
 import { Register } from "../../types/auth.types";
 import styles from "./styles";
@@ -23,42 +24,52 @@ const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      return Alert.alert("Error", "Please fill in all fields");
+  if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+    return Alert.alert("Error", "Please fill in all fields");
+  }
+
+  setIsLoading(true);
+  setLoadingMessage("Connecting to AI network...");
+
+  try {
+    const response = await register({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      password: form.password.trim(),
+    });
+
+    setLoadingMessage("Neural link established! 🚀");
+
+    Toast.show({
+      type: "success",
+      text1: "🎉 Registered successfully",
+      text2: "Redirecting to login page...",
+      visibilityTime: 2000,
+    });
+
+    setTimeout(() => {
+      navigation.navigate("Login");
+    }, 3000);
+  } catch (error: any) {
+    console.error("Register error:", error);
+    let message = "Registration failed";
+
+    if (error.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error.message) {
+      message = error.message;
     }
 
-    setIsLoading(true);
-    setLoadingMessage("Connecting to AI network...");
+    // ❌ Hiển thị lỗi bằng toast
+    Toast.show({
+      type: "error",
+      text1: "😢 Registration failed",
+      text2: message,
+    });
 
-    try {
-      const response = await register({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        password: form.password.trim(),
-      });
-
-      console.log('Register successful:', response.message);
-      
-      setLoadingMessage("Neural link established! 🚀");
-      
-      setTimeout(() => {
-        navigation.navigate("Login");
-      }, 2000);
-
-    } catch (error: any) {
-      console.error("Register error:", error);
-      let message = "Registration failed";
-      
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.message) {
-        message = error.message;
-      }
-      
-      Alert.alert("Error", message);
-      setIsLoading(false);
-    }
-  };
+    setIsLoading(false);
+  }
+};
 
   // AI Brain Icon Component (same as LoginScreen)
   const AIBrainIcon = () => (

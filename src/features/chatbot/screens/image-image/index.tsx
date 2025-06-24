@@ -1,22 +1,26 @@
-import { API_BASE_URL } from "@/config/env"; // Import từ file config thay vì @env
+import { API_BASE_URL } from "@/config/env";
 import {
   ImageToImageScreenNavigationProp,
   RootStackParamList,
 } from "@/navigations/types";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp } from "@react-navigation/native";
 import axios from "axios";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Image,
+  StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import styles from "./styles";
 
 type Props = {
@@ -42,18 +46,14 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      console.log("🔄 Đang tải lịch sử từ:", `${API_BASE_URL}/image-to-image`);
-
       const response = await axios.get(`${API_BASE_URL}/image-to-image`);
       setHistory(response.data);
-
-      console.log("✅ Tải lịch sử thành công:", response.data.length, "mục");
     } catch (error) {
-      console.error("❌ Lỗi khi tải lịch sử:", error);
-      Alert.alert(
-        "Lỗi",
-        "Không thể tải lịch sử. Vui lòng kiểm tra kết nối mạng."
-      );
+      Toast.show({
+        type: "error",
+        text1: "❌ Error loading history",
+        text2: "Please check your network connection.",
+      });
     } finally {
       setLoading(false);
     }
@@ -66,8 +66,8 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "Không có quyền truy cập",
-          "Ứng dụng cần quyền truy cập thư viện ảnh để chọn hình."
+          "No access",
+          "The app needs access to the photo library to select images."
         );
         return;
       }
@@ -84,15 +84,18 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
         await handleTransform(result.assets[0].uri);
       }
     } catch (error) {
-      console.error("❌ Lỗi khi chọn ảnh:", error);
-      Alert.alert("Lỗi", "Không thể chọn ảnh. Vui lòng thử lại.");
+      Toast.show({
+        type: "error",
+        text1: "❌ Error when selecting photo",
+        text2: "Unable to select photo. Please try again.",
+      });
     }
   };
 
   const handleTransform = async (imageUri: string) => {
     try {
       setTransforming(true);
-      console.log("🔄 Đang chuyển đổi ảnh...");
+      console.log("🔄 Image conversion in progress...");
 
       // Đọc file ảnh dưới dạng base64
       const base64 = await FileSystem.readAsStringAsync(imageUri, {
@@ -108,7 +111,7 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
 
       formData.append("image", blob as any, "image.jpg");
 
-      console.log("📤 Đang gửi yêu cầu đến:", `${API_BASE_URL}/image-to-image`);
+      console.log("📤 Sending request to:", `${API_BASE_URL}/image-to-image`);
 
       const apiResponse = await axios.post(
         `${API_BASE_URL}/image-to-image`,
@@ -121,7 +124,7 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
         }
       );
 
-      console.log("✅ Chuyển đổi ảnh thành công");
+      console.log("✅ Image conversion successful");
 
       // Cập nhật lịch sử với ảnh mới
       const newItem: ImageTransformItem = {
@@ -131,14 +134,17 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
       };
 
       setHistory((prevHistory) => [newItem, ...prevHistory]);
-
-      Alert.alert("Thành công", "Ảnh đã được chuyển đổi thành công!");
+      Toast.show({
+        type: "success",
+        text1: "✅ Image has been converted successfully!",
+        text2: "Waiting...",
+      });
     } catch (error) {
-      console.error("❌ Lỗi khi chuyển đổi ảnh:", error);
-      Alert.alert(
-        "Lỗi",
-        "Không thể chuyển đổi ảnh. Vui lòng kiểm tra kết nối mạng và thử lại."
-      );
+      Toast.show({
+        type: "error",
+        text1: "❌ Error converting image",
+        text2: "Unable to convert image. Please try again.",
+      });
     } finally {
       setTransforming(false);
     }
@@ -146,91 +152,140 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log("🗑️ Đang xóa mục:", id);
+      console.log("🗑️ Deleting items:", id);
 
       await axios.delete(`${API_BASE_URL}/image-to-image/${id}`);
       setHistory((prevHistory) => prevHistory.filter((item) => item.id !== id));
 
-      console.log("✅ Xóa thành công");
-      Alert.alert("Thành công", "Đã xóa ảnh khỏi lịch sử.");
+      Toast.show({
+        type: "success",
+        text1: "✅ Deleted successfully",
+        text2: "Photo deleted from history...",
+      });
     } catch (error) {
-      console.error("❌ Lỗi khi xóa:", error);
-      Alert.alert("Lỗi", "Không thể xóa. Vui lòng thử lại.");
+      Toast.show({
+        type: "error",
+        text1: "❌ Error while deleting",
+        text2: "Unable to delete. Please try again.",
+      });
     }
   };
 
   const confirmDelete = (id: string) => {
-    Alert.alert("Xác nhận xóa", "Bạn có chắc muốn xóa ảnh này khỏi lịch sử?", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Xóa", style: "destructive", onPress: () => handleDelete(id) },
-    ]);
+    Alert.alert(
+      "Confirm deletion",
+      "Are you sure you want to delete this photo from history?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => handleDelete(id),
+        },
+      ]
+    );
   };
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Chuyển đổi ảnh</Text>
-
-      <Button
-        title={transforming ? "Đang xử lý..." : "Chọn ảnh"}
-        onPress={pickImage}
-        color="#007AFF"
-        disabled={transforming}
+    <View style={{ flex: 1, marginBottom: 100 }}>
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={[
+          "#0a0a0f", // Dark blue-black at top
+          "#1a1a2e", // Deep purple-blue
+          "#16213e", // Dark navy blue
+          "#0f1419", // Very dark blue-gray
+          "#0a0a0f", // Back to dark at bottom
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
       />
 
-      {transforming && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Đang chuyển đổi ảnh...</Text>
-        </View>
-      )}
+      {/* Main Content */}
+      <View style={styles.screen}>
+        <Text style={styles.title}>🖼️ Convert Photos with AI</Text>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Đang tải lịch sử...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.historyItem}>
-              <Text style={styles.prompt}>Ảnh gốc:</Text>
-              <Image
-                source={{ uri: item.originalImage }}
-                style={styles.image}
-              />
+        {transforming && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#06b6d4" />
+            <Text style={styles.loadingText}>
+              Image conversion in progress...
+            </Text>
+          </View>
+        )}
 
-              <Text style={styles.prompt}>Ảnh đã chuyển đổi:</Text>
-              {item.transformedImage ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#06b6d4" />
+            <Text style={styles.loadingText}>Loading history...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={history}
+            keyExtractor={(item) => item.id}
+            style={styles.historyList}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <Text style={styles.label}>Original photo</Text>
                 <Image
-                  source={{ uri: item.transformedImage }}
+                  source={{ uri: item.originalImage }}
                   style={styles.image}
                 />
-              ) : (
-                <Text style={styles.noImageText}>Chưa có ảnh chuyển đổi</Text>
-              )}
 
-              <Button
-                title="Xóa"
-                onPress={() => confirmDelete(item.id)}
-                color="#FF3B30"
+                <Text style={styles.label}>Image converted</Text>
+                {item.transformedImage ? (
+                  <Image
+                    source={{ uri: item.transformedImage }}
+                    style={styles.image}
+                  />
+                ) : (
+                  <Text style={styles.noImageText}>No photos yet</Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => confirmDelete(item.id)}
+                  style={styles.deleteButton}
+                >
+                  <Ionicons name="trash" size={20} color="#f87171" />
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No images have been converted yet.
+                </Text>
+              </View>
+            }
+            refreshing={loading}
+            onRefresh={fetchHistory}
+          />
+        )}
+
+        {/* Floating Pick Image Button */}
+        <View style={styles.floatingButtonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.floatingButton,
+              transforming && styles.pickButtonDisabled,
+            ]}
+            onPress={pickImage}
+            disabled={transforming}
+          >
+            {transforming ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <MaterialCommunityIcons
+                name="image-auto-adjust"
+                size={24}
+                color="white"
               />
-            </View>
-          )}
-          style={styles.historyList}
-          refreshing={loading}
-          onRefresh={fetchHistory}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                Chưa có ảnh nào được chuyển đổi.{"\n"}
-                Nhấn "Chọn ảnh" để bắt đầu!
-              </Text>
-            </View>
-          }
-        />
-      )}
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };
