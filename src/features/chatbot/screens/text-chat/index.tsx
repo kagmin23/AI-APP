@@ -1,27 +1,29 @@
-import { API_BASE_URL } from "@/config/env";
 import { MainTabParamList } from "@/navigations/types";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import { getChatHistory, sendMessage } from "../../api/textChat.api";
 import styles from "./styles";
 
 type ChatItem = {
-  id: string;
+  _id: string;
   prompt: string;
   response: string;
 };
@@ -31,17 +33,41 @@ const TextChatScreen: React.FC = () => {
   const [history, setHistory] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const flatListRef = useRef<FlatList>(null);
+  const typingAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     fetchHistory();
   }, []);
 
+  useEffect(() => {
+    if (waiting) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(typingAnimation, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(typingAnimation, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      typingAnimation.stopAnimation();
+    }
+  }, [waiting]);
+
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/text-to-text`);
-      setHistory(response.data);
+      const data = await getChatHistory();
+      setHistory(data.reverse());
     } catch (error) {
       Toast.show({
         type: "error",
@@ -60,21 +86,29 @@ const TextChatScreen: React.FC = () => {
     }
 
     const currentInput = input.trim();
-    setSending(true);
     setInput("");
+    setSending(true);
+    setWaiting(true);
+
+    const newMessage: ChatItem = {
+      _id: `${Date.now()}`,
+      prompt: currentInput,
+      response: "",
+    };
+    setHistory((prev) => [...prev, newMessage]);
+
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/text-to-text`, {
-        prompt: currentInput,
-      });
-
-      const newItem: ChatItem = {
-        id: response.data.id,
-        prompt: currentInput,
-        response: response.data.result,
-      };
-
-      setHistory((prev) => [newItem, ...prev]);
+      const reply = await sendMessage(currentInput);
+      setHistory((prev) =>
+        prev.map((msg) =>
+          msg._id === newMessage._id ? { ...msg, response: reply } : msg
+        )
+      );
     } catch (error) {
       Toast.show({
         type: "error",
@@ -84,92 +118,167 @@ const TextChatScreen: React.FC = () => {
       setInput(currentInput);
     } finally {
       setSending(false);
+      setWaiting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/text-to-text/${id}`);
-      setHistory((prev) => prev.filter((item) => item.id !== id));
-      Toast.show({ type: "success", text1: "Message deleted." });
-    } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Delete failed",
-        text2: "Please try again.",
-      });
-    }
-  };
+  const renderChatBubble = ({ item }: { item: ChatItem }) => (
+    <View style={styles.chatBubbleContainer}>
+      {/* User Message */}
+      <View style={styles.userBubbleWrapper}>
+        <View style={styles.userAvatar}>
+          <Ionicons name="person" size={12} color="#fff" />
+        </View>
+        <View style={styles.userBubble}>
+          <Text style={styles.userText}>{item.prompt}</Text>
+        </View>
+      </View>
 
-return (
-  <KeyboardAvoidingView
-    style={styles.screen}
-    behavior={Platform.OS === "ios" ? "padding" : undefined}
-  >
-    {/* Gradient Background */}
-    <LinearGradient
-      colors={[
-        "#0a0a0f", // Dark blue-black at top
-        "#1a1a2e", // Deep purple-blue
-        "#16213e", // Dark navy blue
-        "#0f1419", // Very dark blue-gray
-        "#0a0a0f", // Back to dark at bottom
-      ]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-
-    {/* Overlay content */}
-    <View style={styles.overlay}>
-      <Text style={styles.title}>🤖 Chat with AI</Text>
-
-      <FlatList
-        data={history}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{
-          paddingBottom: 100,
-          flexGrow: 1,
-        }}
-        renderItem={({ item }) => (
-          <View style={styles.messageContainer}>
-            {/* Your message rendering here */}
-          </View>
-        )}
-        refreshing={loading}
-        onRefresh={fetchHistory}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Start a conversation with AI ✨</Text>
-          </View>
-        }
-      />
-
-      {/* Input Section */}
-      <View style={styles.inputSection}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Enter your question..."
-          placeholderTextColor="#ccc"
-          multiline
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={sending || !input.trim()}
-        >
-          {sending ? (
-            <ActivityIndicator color="#fff" />
+      {/* AI Response */}
+      <View style={styles.aiBubbleWrapper}>
+        <View style={styles.aiAvatar}>
+          <LinearGradient
+            colors={["#667eea", "#764ba2"]}
+            style={styles.aiAvatarGradient}
+          >
+            <Ionicons name="sparkles" size={12} color="#fff" />
+          </LinearGradient>
+        </View>
+        <View style={styles.aiBubble}>
+          {item.response ? (
+            <Text style={styles.aiText}>{item.response}</Text>
           ) : (
-            <Ionicons name="send" size={14} color="#fff" />
+            <View style={styles.typingContainer}>
+              <Animated.View
+                style={[
+                  styles.typingDot,
+                  {
+                    opacity: typingAnimation,
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.typingDot,
+                  {
+                    opacity: typingAnimation,
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.typingDot,
+                  {
+                    opacity: typingAnimation,
+                  },
+                ]}
+              />
+              <Text style={styles.typingText}>AI is thinking...</Text>
+            </View>
           )}
-        </TouchableOpacity>
+        </View>
       </View>
     </View>
-  </KeyboardAvoidingView>
-);
-}
+  );
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={styles.screen}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <LinearGradient
+          colors={["#0f0f23", "#1a1a2e", "#16213e", "#0f1419"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerIcon}>
+              <LinearGradient
+                colors={["#667eea", "#764ba2"]}
+                style={styles.headerIconGradient}
+              >
+                <Ionicons name="chatbubbles" size={14} color="#fff" />
+              </LinearGradient>
+            </View>
+            <Text style={styles.headerTitle}>AI Assistant</Text>
+            <View style={styles.statusIndicator}>
+              <View style={styles.onlineIndicator} />
+              <Text style={styles.statusText}>Online</Text>
+            </View>
+          </View>
+        </View>
+
+        <FlatList
+          ref={flatListRef}
+          data={history}
+          keyExtractor={(item) => item._id}
+          renderItem={renderChatBubble}
+          contentContainerStyle={styles.chatContainer}
+          showsVerticalScrollIndicator={false}
+          refreshing={loading}
+          onRefresh={fetchHistory}
+          onContentSizeChange={() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="chatbubble-outline" size={48} color="#667eea" />
+              </View>
+              <Text style={styles.emptyTitle}>Start a conversation</Text>
+              <Text style={styles.emptySubtitle}>
+                Ask me anything and I'll help you out! ✨
+              </Text>
+            </View>
+          }
+        />
+
+        <View style={styles.inputContainer}>
+          <LinearGradient
+            colors={["#1e293b", "#334155"]}
+            style={styles.inputWrapper}
+          >
+            <TextInput
+              style={styles.textInput}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Type your message..."
+              placeholderTextColor="#64748b"
+              multiline
+              maxLength={1000}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!input.trim() || sending) && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={sending || !input.trim()}
+            >
+              <LinearGradient
+                colors={
+                  !input.trim() || sending
+                    ? ["#4b5563", "#6b7280"]
+                    : ["#667eea", "#764ba2"]
+                }
+                style={styles.sendButtonGradient}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="send" size={17} color="#fff" />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
+  );
+};
 
 export default TextChatScreen;
