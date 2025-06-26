@@ -77,19 +77,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 8,
   },
-  userBubble: {
-    maxWidth: "80%",
-    backgroundColor: "#3b82f6",
-    borderRadius: 18,
-    borderBottomRightRadius: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   userText: {
     color: "#fff",
     fontSize: 12,
@@ -204,7 +191,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sendButton: {
-    alignSelf: 'center',
+    alignSelf: "center",
     width: 28,
     height: 28,
     left: 10,
@@ -218,6 +205,60 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  editInput: {
+    color: "#fff",
+    fontSize: 14,
+    backgroundColor: "#1e293b",
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 4,
+  },
+
+  editActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 4,
+  },
+  bubbleActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    marginTop: 8,
+    gap: 12,
+    opacity: 0.6, // Làm mờ để không nổi bật
+  },
+
+  actionButton: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)", // Background nhẹ
+  },
+  editActionButton: {
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+
+  userBubble: {
+    maxWidth: "80%",
+    backgroundColor: "#3b82f6",
+    borderRadius: 18,
+    borderBottomRightRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
 

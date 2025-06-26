@@ -59,4 +59,24 @@ const getChatHistory = async (): Promise<ChatHistoryItem[]> => {
   return response.data;
 };
 
-export { getChatHistory, sendMessage };
+const updateMessage = async (
+  chatId: string,
+  prompt: string
+): Promise<ChatHistoryItem> => {
+  const response = await axios.put<ChatHistoryItem>(
+    `${API_BASE_URL}/chatbotAI/${chatId}`,
+    { prompt },
+    {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
+};
+
+const deleteMessage = async (chatId: string): Promise<void> => {
+  await axios.delete(`${API_BASE_URL}/chatbotAI/${chatId}`);
+};
+
+export { deleteMessage, getChatHistory, sendMessage, updateMessage };

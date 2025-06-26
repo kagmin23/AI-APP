@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Keyboard,
@@ -19,13 +20,19 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import { getChatHistory, sendMessage } from "../../api/textChat.api";
+import {
+  deleteMessage,
+  getChatHistory,
+  sendMessage,
+  updateMessage,
+} from "../../api/textChat.api";
 import styles from "./styles";
 
 type ChatItem = {
   _id: string;
   prompt: string;
   response: string;
+  isEditing?: boolean;
 };
 
 const TextChatScreen: React.FC = () => {
@@ -122,6 +129,72 @@ const TextChatScreen: React.FC = () => {
     }
   };
 
+  const handleEdit = (id: string) => {
+    setHistory((prev) =>
+      prev.map((msg) => (msg._id === id ? { ...msg, isEditing: true } : msg))
+    );
+  };
+
+  const handleCancelEdit = (id: string) => {
+    setHistory((prev) =>
+      prev.map((msg) => (msg._id === id ? { ...msg, isEditing: false } : msg))
+    );
+  };
+
+  const handleEditSave = async (id: string, newPrompt: string) => {
+    try {
+      setWaiting(true);
+      const updated = await updateMessage(id, newPrompt);
+      setHistory((prev) =>
+        prev.map((msg) =>
+          msg._id === id ? { ...updated, isEditing: false } : msg
+        )
+      );
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to update message",
+      });
+    } finally {
+      setWaiting(false);
+    }
+  };
+
+  const confirmDelete = (id: string) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa tin nhắn này không?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+        },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => handleDelete(id),
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMessage(id);
+      setHistory((prev) => prev.filter((msg) => msg._id !== id));
+      Toast.show({
+        type: "success",
+        text1: "✅ Đã xóa 1 tin nhắn",
+      });
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to delete message",
+      });
+    }
+  };
+
   const renderChatBubble = ({ item }: { item: ChatItem }) => (
     <View style={styles.chatBubbleContainer}>
       {/* User Message */}
@@ -129,8 +202,60 @@ const TextChatScreen: React.FC = () => {
         <View style={styles.userAvatar}>
           <Ionicons name="person" size={12} color="#fff" />
         </View>
+
         <View style={styles.userBubble}>
-          <Text style={styles.userText}>{item.prompt}</Text>
+          {item.isEditing ? (
+            <>
+              <TextInput
+                style={styles.editInput}
+                value={item.prompt}
+                onChangeText={(text) =>
+                  setHistory((prev) =>
+                    prev.map((msg) =>
+                      msg._id === item._id ? { ...msg, prompt: text } : msg
+                    )
+                  )
+                }
+                multiline
+              />
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={styles.editActionButton}
+                  onPress={() => handleEditSave(item._id, item.prompt)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="checkmark" size={16} color="#10b981" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.editActionButton}
+                  onPress={() => handleCancelEdit(item._id)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={16} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.userText}>{item.prompt}</Text>
+              <View style={styles.bubbleActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleEdit(item._id)}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="pencil" size={12} color="#cbd5e1" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => confirmDelete(item._id)}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="trash" size={12} color="#cbd5e1" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
