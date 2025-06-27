@@ -4,7 +4,6 @@ import {
   ImageToImageScreen,
   MapScreen,
   TextChatScreen,
-  TextToImageScreen,
 } from "@/features";
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -45,9 +44,9 @@ const MainTabs = () => {
             case "TextChat":
               iconName = "chatbubble-ellipses-outline";
               break;
-            case "TextToImage":
-              iconName = "image-outline";
-              break;
+            // case "TextToImage":
+            //   iconName = "image-outline";
+            //   break;
             case "ImageToImage":
               iconName = "swap-horizontal-outline";
               break;
@@ -64,7 +63,7 @@ const MainTabs = () => {
       })}
     >
       <Tab.Screen name="TextChat" component={TextChatScreen} />
-      <Tab.Screen name="TextToImage" component={TextToImageScreen} />
+      {/* <Tab.Screen name="TextToImage" component={TextToImageScreen} /> */}
       <Tab.Screen name="ImageToImage" component={ImageToImageScreen} />
       <Tab.Screen name="Camera" component={CameraScreen} />
       <Tab.Screen name="Map" component={MapScreen} />

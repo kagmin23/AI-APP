@@ -28,7 +28,6 @@ const Header: React.FC = () => {
     try {
       setShowLogoutModal(false);
       await logout(); // Xóa token, userId
-      console.log("User logged out");
 
       // Reset navigation stack và chuyển về Login
       navigation.dispatch(StackActions.replace("Login"));

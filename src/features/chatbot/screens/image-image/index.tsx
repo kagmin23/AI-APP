@@ -95,8 +95,6 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
   const handleTransform = async (imageUri: string) => {
     try {
       setTransforming(true);
-      console.log("🔄 Image conversion in progress...");
-
       // Đọc file ảnh dưới dạng base64
       const base64 = await FileSystem.readAsStringAsync(imageUri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -111,8 +109,6 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
 
       formData.append("image", blob as any, "image.jpg");
 
-      console.log("📤 Sending request to:", `${API_BASE_URL}/image-to-image`);
-
       const apiResponse = await axios.post(
         `${API_BASE_URL}/image-to-image`,
         formData,
@@ -123,8 +119,6 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
           timeout: 30000, // Timeout 30 giây
         }
       );
-
-      console.log("✅ Image conversion successful");
 
       // Cập nhật lịch sử với ảnh mới
       const newItem: ImageTransformItem = {
@@ -152,8 +146,6 @@ const ImageToImageScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log("🗑️ Deleting items:", id);
-
       await axios.delete(`${API_BASE_URL}/image-to-image/${id}`);
       setHistory((prevHistory) => prevHistory.filter((item) => item.id !== id));
 

@@ -3,12 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -26,14 +27,24 @@ import {
   sendMessage,
   updateMessage,
 } from "../../api/textChat.api";
+import { getImageHistory, textImage } from "../../api/textImage.api";
 import styles from "./styles";
 
 type ChatItem = {
   _id: string;
   prompt: string;
-  response: string;
+  response?: string;
+  imageUrl?: string;
   isEditing?: boolean;
+  type?: "text" | "image";
+  createdAt: string;
 };
+
+const IMAGE_KEYWORDS = [
+  "draw", "generate image", "image of", "picture of", "create image", 
+  "make image", "generate picture", "create picture", "draw me", 
+  "vẽ", "ảnh", "hình ảnh", "tạo ảnh", "tạo hình", "sinh ảnh"
+];
 
 const TextChatScreen: React.FC = () => {
   const [input, setInput] = useState("");
@@ -41,270 +52,309 @@ const TextChatScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const flatListRef = useRef<FlatList>(null);
   const typingAnimation = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
+  // Animation effect
   useEffect(() => {
     if (waiting) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(typingAnimation, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(typingAnimation, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
+          Animated.timing(typingAnimation, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(typingAnimation, { toValue: 0, duration: 800, useNativeDriver: true }),
         ])
       ).start();
     } else {
       typingAnimation.stopAnimation();
     }
-  }, [waiting]);
+  }, [waiting, typingAnimation]);
 
-  const fetchHistory = async () => {
+  // Utility functions
+  const showToast = useCallback((type: string, text1: string, text2?: string) => {
+    Toast.show({ type, text1, text2 });
+  }, []);
+
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
+
+  const isImagePrompt = useCallback((text: string) => {
+    const lower = text.toLowerCase();
+    return IMAGE_KEYWORDS.some(keyword => lower.includes(keyword));
+  }, []);
+
+  // Data fetching
+  const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getChatHistory();
-      setHistory(data.reverse());
+      const [textHistory, imageHistory] = await Promise.all([
+        getChatHistory(),
+        getImageHistory(),
+      ]);
+
+      const combinedHistory = [
+        ...textHistory.map(item => ({ ...item, type: "text" as const })),
+        ...imageHistory.map(item => ({
+          _id: item._id,
+          prompt: item.prompt,
+          imageUrl: item.imageUrl,
+          type: "image" as const,
+          createdAt: item.createdAt,
+        }))
+      ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      setHistory(combinedHistory);
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "❌ Error loading history",
-        text2: "Please check your network connection.",
-      });
+      showToast("error", "❌ Error loading history", "Please check your network connection.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const handleSend = async () => {
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Message operations
+  const updateHistoryItem = useCallback((id: string, updates: Partial<ChatItem>) => {
+    setHistory(prev => prev.map(msg => msg._id === id ? { ...msg, ...updates } : msg));
+  }, []);
+
+  const removeHistoryItem = useCallback((id: string) => {
+    setHistory(prev => prev.filter(msg => msg._id !== id));
+  }, []);
+
+  const processImageResponse = useCallback((imageData: any) => {
+    if (typeof imageData !== "string") {
+      throw new Error("Invalid response type from image API");
+    }
+    
+    if (imageData.startsWith("data:image/") || 
+        imageData.startsWith("http://") || 
+        imageData.startsWith("https://")) {
+      return imageData;
+    }
+    
+    throw new Error("Invalid image data format received from server");
+  }, []);
+
+  const handleSend = useCallback(async () => {
     if (!input.trim()) {
-      Toast.show({ type: "info", text1: "Please enter message!" });
+      showToast("info", "Please enter message!");
       return;
     }
 
     const currentInput = input.trim();
+    const isImageRequest = isImagePrompt(currentInput);
+    const newMessage: ChatItem = {
+      _id: `temp_${Date.now()}`,
+      prompt: currentInput,
+      type: isImageRequest ? "image" : "text",
+      createdAt: new Date().toISOString(),
+    };
+
     setInput("");
     setSending(true);
     setWaiting(true);
-
-    const newMessage: ChatItem = {
-      _id: `${Date.now()}`,
-      prompt: currentInput,
-      response: "",
-    };
-    setHistory((prev) => [...prev, newMessage]);
-
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    setHistory(prev => [...prev, newMessage]);
+    scrollToEnd();
 
     try {
-      const reply = await sendMessage(currentInput);
-      setHistory((prev) =>
-        prev.map((msg) =>
-          msg._id === newMessage._id ? { ...msg, response: reply } : msg
-        )
-      );
+      if (isImageRequest) {
+        const imageData = await textImage(currentInput);
+        const imageUrl = processImageResponse(imageData);
+        updateHistoryItem(newMessage._id, { imageUrl, type: "image" });
+        showToast("success", "🎨 Image generated successfully!");
+      } else {
+        const reply = await sendMessage(currentInput);
+        if (!reply) throw new Error("No response returned from API");
+        updateHistoryItem(newMessage._id, { response: reply, type: "text" });
+      }
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Unable to send message",
-        text2: "Please try again later.",
-      });
+      removeHistoryItem(newMessage._id);
+      showToast(
+        "error",
+        isImageRequest ? "❌ Failed to generate image" : "❌ Failed to send message",
+        error instanceof Error ? error.message : "Please try again later."
+      );
       setInput(currentInput);
     } finally {
       setSending(false);
       setWaiting(false);
     }
-  };
+  }, [input, isImagePrompt, showToast, scrollToEnd, updateHistoryItem, removeHistoryItem, processImageResponse]);
 
-  const handleEdit = (id: string) => {
-    setHistory((prev) =>
-      prev.map((msg) => (msg._id === id ? { ...msg, isEditing: true } : msg))
-    );
-  };
+  // Edit operations
+  const handleEdit = useCallback((id: string) => {
+    updateHistoryItem(id, { isEditing: true });
+  }, [updateHistoryItem]);
 
-  const handleCancelEdit = (id: string) => {
-    setHistory((prev) =>
-      prev.map((msg) => (msg._id === id ? { ...msg, isEditing: false } : msg))
-    );
-  };
+  const handleCancelEdit = useCallback((id: string) => {
+    updateHistoryItem(id, { isEditing: false });
+  }, [updateHistoryItem]);
 
-  const handleEditSave = async (id: string, newPrompt: string) => {
+  const handleEditSave = useCallback(async (id: string, newPrompt: string) => {
     try {
       setWaiting(true);
       const updated = await updateMessage(id, newPrompt);
-      setHistory((prev) =>
-        prev.map((msg) =>
-          msg._id === id ? { ...updated, isEditing: false } : msg
-        )
-      );
+      updateHistoryItem(id, { ...updated, isEditing: false });
+      showToast("success", "✅ Message updated successfully!");
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Failed to update message",
-      });
+      showToast("error", "❌ Failed to update message", "Please try again later.");
     } finally {
       setWaiting(false);
     }
-  };
+  }, [updateHistoryItem, showToast]);
 
-  const confirmDelete = (id: string) => {
+  // Delete operations
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      if (id.startsWith("temp_")) {
+        removeHistoryItem(id);
+        showToast("success", "✅ Message deleted");
+        return;
+      }
+
+      await deleteMessage(id);
+      removeHistoryItem(id);
+      showToast("success", "✅ Message deleted successfully");
+    } catch (error) {
+      showToast("error", "❌ Failed to delete message", "Please try again later.");
+    }
+  }, [removeHistoryItem, showToast]);
+
+  const confirmDelete = useCallback((id: string) => {
     Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa tin nhắn này không?",
+      "Confirm deletion",
+      "Are you sure you want to delete this message?",
       [
-        {
-          text: "Hủy",
-          style: "cancel",
-        },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => handleDelete(id),
-        },
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => handleDelete(id) },
       ],
       { cancelable: true }
     );
-  };
+  }, [handleDelete]);
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteMessage(id);
-      setHistory((prev) => prev.filter((msg) => msg._id !== id));
-      Toast.show({
-        type: "success",
-        text1: "✅ Đã xóa 1 tin nhắn",
-      });
-    } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Failed to delete message",
-      });
+  // Render components
+  const renderEditingBubble = useCallback((item: ChatItem) => (
+    <>
+      <TextInput
+        style={styles.editInput}
+        value={item.prompt}
+        onChangeText={(text) => updateHistoryItem(item._id, { prompt: text })}
+        multiline
+      />
+      <View style={styles.editActions}>
+        <TouchableOpacity
+          style={styles.editActionButton}
+          onPress={() => handleEditSave(item._id, item.prompt)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="checkmark" size={16} color="#10b981" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.editActionButton}
+          onPress={() => handleCancelEdit(item._id)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={16} color="#ef4444" />
+        </TouchableOpacity>
+      </View>
+    </>
+  ), [updateHistoryItem, handleEditSave, handleCancelEdit]);
+
+  const renderNormalBubble = useCallback((item: ChatItem) => (
+    <>
+      <Text style={styles.userText}>{item.prompt}</Text>
+      <View style={styles.bubbleActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleEdit(item._id)}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="pencil" size={12} color="#cbd5e1" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => confirmDelete(item._id)}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="trash" size={12} color="#cbd5e1" />
+        </TouchableOpacity>
+      </View>
+    </>
+  ), [handleEdit, confirmDelete]);
+
+  const renderAIResponse = useCallback((item: ChatItem) => {
+    if (item.response) {
+      return <Text style={styles.aiText}>{item.response}</Text>;
     }
-  };
+    
+    if (item.imageUrl) {
+      return (
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.generatedImage}
+            resizeMode="cover"
+            onError={() => showToast("error", "❌ Failed to load image", "The image URL might be invalid.")}
+          />
+        </View>
+      );
+    }
 
-  const renderChatBubble = ({ item }: { item: ChatItem }) => (
+    return (
+      <View style={styles.typingContainer}>
+        {[1, 2, 3].map(i => (
+          <Animated.View
+            key={i}
+            style={[styles.typingDot, { opacity: typingAnimation }]}
+          />
+        ))}
+        <Text style={styles.typingText}>
+          {item.type === "image" ? "Generating image..." : "AI is thinking..."}
+        </Text>
+      </View>
+    );
+  }, [typingAnimation, showToast]);
+
+  const renderChatBubble = useCallback(({ item }: { item: ChatItem }) => (
     <View style={styles.chatBubbleContainer}>
       {/* User Message */}
       <View style={styles.userBubbleWrapper}>
         <View style={styles.userAvatar}>
           <Ionicons name="person" size={12} color="#fff" />
         </View>
-
         <View style={styles.userBubble}>
-          {item.isEditing ? (
-            <>
-              <TextInput
-                style={styles.editInput}
-                value={item.prompt}
-                onChangeText={(text) =>
-                  setHistory((prev) =>
-                    prev.map((msg) =>
-                      msg._id === item._id ? { ...msg, prompt: text } : msg
-                    )
-                  )
-                }
-                multiline
-              />
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  style={styles.editActionButton}
-                  onPress={() => handleEditSave(item._id, item.prompt)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="checkmark" size={16} color="#10b981" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.editActionButton}
-                  onPress={() => handleCancelEdit(item._id)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={16} color="#ef4444" />
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              <Text style={styles.userText}>{item.prompt}</Text>
-              <View style={styles.bubbleActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleEdit(item._id)}
-                  activeOpacity={0.6}
-                >
-                  <Ionicons name="pencil" size={12} color="#cbd5e1" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => confirmDelete(item._id)}
-                  activeOpacity={0.6}
-                >
-                  <Ionicons name="trash" size={12} color="#cbd5e1" />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+          {item.isEditing ? renderEditingBubble(item) : renderNormalBubble(item)}
         </View>
       </View>
 
       {/* AI Response */}
       <View style={styles.aiBubbleWrapper}>
         <View style={styles.aiAvatar}>
-          <LinearGradient
-            colors={["#667eea", "#764ba2"]}
-            style={styles.aiAvatarGradient}
-          >
+          <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.aiAvatarGradient}>
             <Ionicons name="sparkles" size={12} color="#fff" />
           </LinearGradient>
         </View>
         <View style={styles.aiBubble}>
-          {item.response ? (
-            <Text style={styles.aiText}>{item.response}</Text>
-          ) : (
-            <View style={styles.typingContainer}>
-              <Animated.View
-                style={[
-                  styles.typingDot,
-                  {
-                    opacity: typingAnimation,
-                  },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.typingDot,
-                  {
-                    opacity: typingAnimation,
-                  },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.typingDot,
-                  {
-                    opacity: typingAnimation,
-                  },
-                ]}
-              />
-              <Text style={styles.typingText}>AI is thinking...</Text>
-            </View>
-          )}
+          {renderAIResponse(item)}
         </View>
       </View>
     </View>
-  );
+  ), [renderEditingBubble, renderNormalBubble, renderAIResponse]);
+
+  const EmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="chatbubble-outline" size={48} color="#667eea" />
+      </View>
+      <Text style={styles.emptyTitle}>Start a conversation</Text>
+      <Text style={styles.emptySubtitle}>Ask me anything or request an image! ✨🎨</Text>
+    </View>
+  ), []);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -319,13 +369,11 @@ const TextChatScreen: React.FC = () => {
           style={StyleSheet.absoluteFill}
         />
 
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerIcon}>
-              <LinearGradient
-                colors={["#667eea", "#764ba2"]}
-                style={styles.headerIconGradient}
-              >
+              <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.headerIconGradient}>
                 <Ionicons name="chatbubbles" size={14} color="#fff" />
               </LinearGradient>
             </View>
@@ -337,6 +385,7 @@ const TextChatScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Chat List */}
         <FlatList
           ref={flatListRef}
           data={history}
@@ -346,27 +395,13 @@ const TextChatScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           refreshing={loading}
           onRefresh={fetchHistory}
-          onContentSizeChange={() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="chatbubble-outline" size={48} color="#667eea" />
-              </View>
-              <Text style={styles.emptyTitle}>Start a conversation</Text>
-              <Text style={styles.emptySubtitle}>
-                Ask me anything and I'll help you out! ✨
-              </Text>
-            </View>
-          }
+          onContentSizeChange={scrollToEnd}
+          ListEmptyComponent={EmptyComponent}
         />
 
+        {/* Input */}
         <View style={styles.inputContainer}>
-          <LinearGradient
-            colors={["#1e293b", "#334155"]}
-            style={styles.inputWrapper}
-          >
+          <LinearGradient colors={["#1e293b", "#334155"]} style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
               value={input}

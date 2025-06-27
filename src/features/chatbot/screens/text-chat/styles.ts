@@ -246,7 +246,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
-
   userBubble: {
     maxWidth: "80%",
     backgroundColor: "#3b82f6",
@@ -259,6 +258,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  generatedImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginTop: 4,
+    backgroundColor: "#e2e8f0",
+  },
+  imageContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageCaption: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });
 

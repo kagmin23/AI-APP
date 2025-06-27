@@ -13,7 +13,6 @@ interface AuthResponse {
 
 const register = async (data: Register): Promise<AuthResponse> => {
   const url = `${API_BASE_URL}/auth/register`;
-  console.log("🔧 Register URL:", url);
 
   const response = await axios.post<AuthResponse>(url, data, {
     headers: { "Content-Type": "application/json" },
