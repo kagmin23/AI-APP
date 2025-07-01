@@ -276,6 +276,9 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
   },
+  uploadButton: {
+    alignSelf: "center"
+},
 });
 
 export default styles;

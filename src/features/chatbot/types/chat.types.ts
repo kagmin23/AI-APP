@@ -1,3 +1,5 @@
+import { Animated } from "react-native";
+
 export type ChatItem = {
   _id: string;
   prompt: string;
@@ -33,11 +35,12 @@ export interface AIResponseProps {
 
 export interface ChatBubbleProps {
   item: ChatItem;
-  typingAnimation: any;
+  typingAnimation: Animated.Value;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onSave: (id: string, newPrompt: string) => void;
   onCancel: (id: string) => void;
   onUpdateItem: (id: string, updates: Partial<ChatItem>) => void;
   onImageError: () => void;
+  updating?: boolean;
 }

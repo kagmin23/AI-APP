@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
+    ActivityIndicator,
     Animated,
     Image,
     Text,
@@ -18,31 +19,36 @@ import {
 } from "react-native";
 import styles from "./styles";
 
-export const EditingBubble: React.FC<EditingBubbleProps> = ({
-  item,
-  onSave,
-  onCancel,
-  onUpdateItem,
-}) => (
+// Bubble đang chỉnh sửa
+export const EditingBubble: React.FC<
+  EditingBubbleProps & { loading?: boolean }
+> = ({ item, onSave, onCancel, onUpdateItem, loading = false }) => (
   <>
     <TextInput
       style={styles.editInput}
       value={item.prompt}
       onChangeText={(text) => onUpdateItem(item._id, { prompt: text })}
       multiline
+      editable={!loading}
     />
     <View style={styles.editActions}>
       <TouchableOpacity
-        style={styles.editActionButton}
+        style={[styles.editActionButton, {width: 40}]}
         onPress={() => onSave(item._id, item.prompt)}
         activeOpacity={0.7}
+        disabled={loading}
       >
-        <Ionicons name="checkmark" size={16} color="#10b981" />
+        {loading ? (
+          <ActivityIndicator size={16} color="#10b981" />
+        ) : (
+          <Text style={{ color: "#fff", fontSize: 10 }}>Send</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.editActionButton}
         onPress={() => onCancel(item._id)}
         activeOpacity={0.7}
+        disabled={loading}
       >
         <Ionicons name="close" size={16} color="#ef4444" />
       </TouchableOpacity>
@@ -50,6 +56,7 @@ export const EditingBubble: React.FC<EditingBubbleProps> = ({
   </>
 );
 
+// Bubble bình thường (chưa chỉnh sửa)
 export const NormalBubble: React.FC<NormalBubbleProps> = ({
   item,
   onEdit,
@@ -76,6 +83,7 @@ export const NormalBubble: React.FC<NormalBubbleProps> = ({
   </>
 );
 
+// Bubble AI phản hồi
 export const AIResponse: React.FC<AIResponseProps> = ({
   item,
   typingAnimation,
@@ -115,6 +123,7 @@ export const AIResponse: React.FC<AIResponseProps> = ({
   );
 };
 
+// ChatBubble chính
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   item,
   typingAnimation,
@@ -124,6 +133,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   onCancel,
   onUpdateItem,
   onImageError,
+  updating,
 }) => (
   <View style={styles.chatBubbleContainer}>
     {/* User Message */}
@@ -138,6 +148,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             onSave={onSave}
             onCancel={onCancel}
             onUpdateItem={onUpdateItem}
+            loading={updating}
           />
         ) : (
           <NormalBubble item={item} onEdit={onEdit} onDelete={onDelete} />
@@ -166,6 +177,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   </View>
 );
 
+// Empty view
 export const EmptyStateComponent: React.FC = () => (
   <View style={styles.emptyContainer}>
     <View style={styles.emptyIcon}>
@@ -176,6 +188,7 @@ export const EmptyStateComponent: React.FC = () => (
   </View>
 );
 
+// Header
 export const HeaderComponent: React.FC = () => (
   <View style={styles.header}>
     <View style={styles.headerContent}>

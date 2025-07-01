@@ -3,7 +3,7 @@ import {
     LIMITS,
     PLACEHOLDER_TEXTS,
 } from "@/features/chatbot/constants/chat.constants";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
@@ -19,6 +19,7 @@ interface InputComponentProps {
   sending: boolean;
   onChangeText: (text: string) => void;
   onSend: () => void;
+  onUploadImage?: () => void;
 }
 
 export const InputComponent: React.FC<InputComponentProps> = ({
@@ -26,6 +27,7 @@ export const InputComponent: React.FC<InputComponentProps> = ({
   sending,
   onChangeText,
   onSend,
+  onUploadImage,
 }) => (
   <View style={styles.inputContainer}>
     <LinearGradient colors={COLORS.GRADIENT_INPUT} style={styles.inputWrapper}>
@@ -38,6 +40,13 @@ export const InputComponent: React.FC<InputComponentProps> = ({
         multiline
         maxLength={LIMITS.MAX_INPUT_LENGTH}
       />
+
+      {/* Upload image button */}
+      <TouchableOpacity style={styles.uploadButton} onPress={onUploadImage}>
+        <MaterialCommunityIcons name="paperclip" size={20} color="white" />
+      </TouchableOpacity>
+
+      {/* Send message button */}
       <TouchableOpacity
         style={[
           styles.sendButton,

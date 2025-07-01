@@ -27,7 +27,8 @@ import styles from "./styles";
 const TextChatScreen: React.FC = () => {
   const [input, setInput] = useState("");
 
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const navigation =
+    useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { showToast } = useToast();
   const { flatListRef, scrollToEnd } = useScrollToEnd();
 
@@ -40,8 +41,14 @@ const TextChatScreen: React.FC = () => {
     fetchHistory,
   } = useChatHistory();
 
-  const { sending, waiting, handleSendMessage, handleEditSave, confirmDelete } =
-    useChatOperations();
+  const {
+    sending,
+    waiting,
+    handleSendMessage,
+    handleEditSave,
+    confirmDelete,
+    updatingId, // 👈 lấy updatingId từ hook
+  } = useChatOperations();
 
   const typingAnimation = useTypingAnimation(waiting);
 
@@ -120,6 +127,7 @@ const TextChatScreen: React.FC = () => {
         onCancel={handleCancelEdit}
         onUpdateItem={updateHistoryItem}
         onImageError={handleImageError}
+        updating={updatingId === item._id}
       />
     ),
     [
@@ -130,6 +138,7 @@ const TextChatScreen: React.FC = () => {
       handleCancelEdit,
       updateHistoryItem,
       handleImageError,
+      updatingId,
     ]
   );
 

@@ -131,6 +131,7 @@ export const useChatOperations = () => {
   const [sending, setSending] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const { showToast } = useToast();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const handleSendMessage = useCallback(
     async (
@@ -193,30 +194,66 @@ export const useChatOperations = () => {
       updateHistoryItem: (id: string, updates: Partial<ChatItem>) => void
     ) => {
       try {
+        setUpdatingId(id);
         setWaiting(true);
 
         const item = history.find((msg) => msg._id === id);
-        if (!item) throw new Error("Item not found");
+        if (!item) {
+          throw new Error("Message not found");
+        }
+
+        if (id.startsWith("temp_")) {
+          showToast(
+            "error",
+            TOAST_MESSAGES.UPDATE_ERROR,
+            "You can not edit this message."
+          );
+          console.log("temp_", id);
+          return;
+        }
 
         if (item.type === "image") {
-          await updateImage(id, newPrompt);
-          const newImageData = await textImage(newPrompt);
-          const newImageUrl = processImageResponse(newImageData);
+          const response = await updateImage(id, newPrompt);
+          if (!response.success) {
+            const errorMsg =
+              "error" in response && typeof response.error === "string"
+                ? response.error
+                : "Can not update message";
+            throw new Error(errorMsg);
+          }
+
+          const { image } = response;
+          const finalImageUrl = image.imageBase64
+            ? `data:image/jpeg;base64,${image.imageBase64}`
+            : image.imageUrl;
 
           updateHistoryItem(id, {
             prompt: newPrompt,
-            imageUrl: newImageUrl,
+            imageUrl: finalImageUrl,
             isEditing: false,
+            createdAt: image.createdAt || item.createdAt,
           });
+
           showToast("success", TOAST_MESSAGES.REGENERATE_SUCCESS);
         } else {
           const updated = await updateMessage(id, newPrompt);
-          updateHistoryItem(id, { ...updated, isEditing: false });
+          if (!updated) {
+            throw new Error("Can not update message");
+          }
+
+          updateHistoryItem(id, {
+            prompt: updated.prompt,
+            response: updated.response,
+            isEditing: false,
+            createdAt: updated.createdAt || item.createdAt,
+          });
+
           showToast("success", TOAST_MESSAGES.UPDATE_SUCCESS);
         }
       } catch (error) {
         showToast("error", TOAST_MESSAGES.UPDATE_ERROR, getErrorMessage(error));
       } finally {
+        setUpdatingId(null);
         setWaiting(false);
       }
     },
@@ -287,5 +324,6 @@ export const useChatOperations = () => {
     handleSendMessage,
     handleEditSave,
     confirmDelete,
+    updatingId,
   };
 };
