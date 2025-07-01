@@ -1,64 +1,168 @@
 import { StyleSheet } from "react-native";
 
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 40,
   },
   title: {
-    fontSize: 15,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#06b6d4",
+    color: "#fff",
     textAlign: "center",
-    marginTop: 10,
+    marginBottom: 40,
   },
-  photoContainer: {
-    flex: 1,
+  photoBox: {
+    width: "90%",
+    height: 220,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    alignSelf: "center",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+    marginBottom: 20,
+    position: "relative",
   },
-  noPhoto: {
-    color: "#94a3b8",
-    fontSize: 10,
-    fontStyle: "italic",
-    textAlign: "center",
-    paddingBottom: 100,
-  },
-  image: {
+
+  previewImage: {
     width: "100%",
-    height: 400,
-    borderRadius: 12,
+    height: "100%",
     resizeMode: "cover",
-    borderWidth: 1,
-    borderColor: "#333",
   },
-  bottomButtonContainer: {
+
+  overlayContainer: {
     position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
+    bottom: 12,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  buttonContent: {
+
+  roundIconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#06b6d4",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  captureButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  emptyBox: {
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  placeholder: {
+    color: "#ccc",
+    fontSize: 12,
+    fontStyle: "italic",
+    marginBottom: 20,
+  },
+
+  buttonInline: {
+    flexDirection: "row",
+    backgroundColor: "#06b6d4",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 16,
+    gap: 10,
+  },
+
+  buttonOverlay: {
+    position: "absolute",
+    bottom: 12,
+    alignSelf: "center",
+    backgroundColor: "rgba(6, 182, 212, 0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
   },
 
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#06b6d4",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignSelf: "center",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 24,
+  },
   buttonText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
-    marginRight: 6, // khoảng cách giữa chữ và icon
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 20,
+    marginTop: 50,
+    marginLeft: 8,
+  },
+  historyImage: {
+    width: 350,
+    height: 200,
+    borderRadius: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalImage: {
+    width: "90%",
+    height: "70%",
+    borderRadius: 16,
+    resizeMode: "contain",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
   },
 
-  icon: {
-    // Không cần gì thêm trừ khi bạn muốn chỉnh padding/margin thêm
+  historyItemWrapper: {
+    position: "relative",
+    marginRight: 10,
   },
-  button: {
-    backgroundColor: "#06b6d4",
-    paddingVertical: 14,
-    borderRadius: 50,
-    alignItems: "center",
+
+  trashIcon: {
+    position: "absolute",
+    top: 8,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 9,
+    borderRadius: 10,
+    zIndex: 1,
   },
 });
 
