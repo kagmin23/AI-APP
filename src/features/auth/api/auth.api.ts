@@ -46,6 +46,22 @@ const login = async (data: Login): Promise<AuthResponse> => {
   return response.data;
 };
 
+const forgotPassword = async (email: string): Promise<{ message: string }> => {
+  const url = `${API_BASE_URL}/auth/forgot-password`;
+  const response = await axios.post<{ message: string }>(url, { email });
+  return response.data;
+};
+
+const resetPassword = async (payload: {
+  email: string;
+  otp: string;
+  newPassword: string;
+}): Promise<{ message: string }> => {
+  const url = `${API_BASE_URL}/auth/reset-password`;
+  const response = await axios.post<{ message: string }>(url, payload);
+  return response.data;
+};
+
 const isAuthenticated = async (): Promise<boolean> => {
   const token = await AsyncStorage.getItem("token");
   return !!token;
@@ -56,4 +72,10 @@ const logout = async (): Promise<void> => {
   await AsyncStorage.removeItem("userId");
 };
 
-export { isAuthenticated, login, logout, register };
+export {
+  forgotPassword, isAuthenticated,
+  login,
+  logout,
+  register, resetPassword
+};
+

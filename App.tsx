@@ -1,5 +1,5 @@
 // App.tsx
-import { LoginScreen, RegisterScreen } from "@/features";
+import { ForgotPasswordScreen, LoginScreen, RegisterScreen } from "@/features";
 import MainTabs from "@/navigations/navigation";
 import { RootStackParamList } from "@/navigations/types";
 import { NavigationContainer } from "@react-navigation/native";
@@ -16,6 +16,7 @@ const App: React.FC = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
         </Stack.Navigator>
       </NavigationContainer>

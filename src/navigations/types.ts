@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
   MainTabs: undefined;
   TextChat: undefined;
   TextToImage: undefined;
@@ -22,6 +23,11 @@ export type LoginScreenNavigationProp = NativeStackNavigationProp<
 export type RegisterScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "Register"
+>;
+
+export type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ForgotPassword"
 >;
 
 // Bottom Tab Navigator
