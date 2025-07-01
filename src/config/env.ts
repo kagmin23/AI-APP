@@ -16,7 +16,7 @@ export const isProduction = () => ENVIRONMENT === 'production';
 
 // Log cấu hình (chỉ trong development)
 if (isDevelopment()) {
-  console.log('🔧 Cấu hình môi trường:', {
+  console.log('🔧 Environment config:', {
     API_BASE_URL,
     GOOGLE_MAPS_API_KEY,
     ENVIRONMENT,
