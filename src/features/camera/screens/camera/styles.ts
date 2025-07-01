@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   historyImage: {
-    width: 350,
+    width: 300,
     height: 200,
     borderRadius: 12,
     marginRight: 12,
@@ -163,6 +163,53 @@ const styles = StyleSheet.create({
     padding: 9,
     borderRadius: 10,
     zIndex: 1,
+  },
+  countdownOverlay: {
+    position: "absolute",
+    top: "40%",
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 50,
+  },
+  countdownText: {
+    fontSize: 36,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  previewImageWrapper: {
+    position: "relative",
+  },
+
+  overlayDim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+
+  countdownTextContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  countdownLabel: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+
+  countdownNumber: {
+    color: "#fff",
+    fontSize: 36,
+    fontWeight: "bold",
   },
 });
 

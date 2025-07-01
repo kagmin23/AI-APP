@@ -30,10 +30,10 @@ const CameraScreen = () => {
   const [photos, setPhotos] = useState<{ _id: string; cameraData: string }[]>(
     []
   );
-
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUri, setPreviewUri] = useState("");
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -55,7 +55,7 @@ const CameraScreen = () => {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Denied", "You need camera permission.");
+      Alert.alert("❌ Permission Denied", "You need camera permission.");
       return;
     }
 
@@ -92,12 +92,23 @@ const CameraScreen = () => {
           ...prev,
         ]);
 
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 1000,
-          delay: 2000,
-          useNativeDriver: true,
-        }).start(() => setPhoto(""));
+        setCountdown(5);
+        let secondsLeft = 5;
+        const interval = setInterval(() => {
+          secondsLeft -= 1;
+          if (secondsLeft === 0) {
+            clearInterval(interval);
+            setCountdown(null);
+
+            Animated.timing(fadeAnim, {
+              toValue: 0,
+              duration: 1000,
+              useNativeDriver: true,
+            }).start(() => setPhoto(""));
+          } else {
+            setCountdown(secondsLeft);
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error("Camera error", error);
@@ -150,15 +161,18 @@ const CameraScreen = () => {
                 source={{ uri: photo }}
                 style={[styles.previewImage, { opacity: fadeAnim }]}
               />
-              <View style={styles.overlayContainer}>
-                <TouchableOpacity
-                  onPress={takePhoto}
-                  style={styles.roundIconButton}
-                >
-                  <FontAwesome name="camera" size={20} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.captureButtonText}>Take another photo</Text>
-              </View>
+
+              {/* Countdown nổi giữa ảnh */}
+              {countdown !== null && (
+                <View style={styles.overlayDim}>
+                  <View style={styles.countdownTextContainer}>
+                    <Text style={styles.countdownLabel}>
+                      Chuyển đổi ảnh sau
+                    </Text>
+                    <Text style={styles.countdownNumber}>{countdown}</Text>
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.emptyBox}>
