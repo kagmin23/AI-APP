@@ -1,4 +1,3 @@
-// import như cũ...
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -16,7 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { deleteCameraPhoto, getCameraPhotos, uploadCameraPhoto } from "../../api/camera.api";
+import Toast from "react-native-toast-message";
+import {
+  deleteCameraPhoto,
+  getCameraPhotos,
+  uploadCameraPhoto,
+} from "../../api/camera.api";
 import styles from "./styles";
 
 const CameraScreen = () => {
@@ -28,7 +32,6 @@ const CameraScreen = () => {
   );
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
-
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUri, setPreviewUri] = useState("");
 
@@ -39,6 +42,10 @@ const CameraScreen = () => {
         setPhotos(data);
       } catch (error) {
         console.error("Error loading photos", error);
+        Toast.show({
+          type: "error",
+          text1: "❌ Failed to load photos",
+        });
       }
     };
 
@@ -75,7 +82,10 @@ const CameraScreen = () => {
         const base64Data = `data:image/jpg;base64,${base64}`;
         const response = await uploadCameraPhoto(base64Data);
 
-        Alert.alert("Uploaded", `Photo ID: ${response.id}`);
+        Toast.show({
+          type: "success",
+          text1: "✅ Photo uploaded",
+        });
 
         setPhotos((prev) => [
           { _id: response.id, cameraData: base64Data },
@@ -91,7 +101,10 @@ const CameraScreen = () => {
       }
     } catch (error) {
       console.error("Camera error", error);
-      Alert.alert("Error", "Camera or upload failed.");
+      Toast.show({
+        type: "error",
+        text1: "❌ Camera or upload failed",
+      });
     } finally {
       setLoading(false);
     }
@@ -100,6 +113,22 @@ const CameraScreen = () => {
   const handlePreview = (uri: string) => {
     setPreviewUri(uri);
     setPreviewVisible(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCameraPhoto(id);
+      setPhotos((prev) => prev.filter((p) => p._id !== id));
+      Toast.show({
+        type: "success",
+        text1: "✅ Photo deleted successfully",
+      });
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "❌ Failed to delete photo",
+      });
+    }
   };
 
   return (
@@ -166,27 +195,14 @@ const CameraScreen = () => {
               <TouchableOpacity
                 style={styles.trashIcon}
                 onPress={() => {
-                  Alert.alert(
-                    "Delete",
-                    "Are you sure you want to delete this photo?",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await deleteCameraPhoto(item._id);
-                            setPhotos((prev) =>
-                              prev.filter((p) => p._id !== item._id)
-                            );
-                          } catch (err) {
-                            Alert.alert("Error", "Failed to delete photo.");
-                          }
-                        },
-                      },
-                    ]
-                  );
+                  Alert.alert("Delete", "Delete this photo?", [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => handleDelete(item._id),
+                    },
+                  ]);
                 }}
               >
                 <FontAwesome name="trash" size={16} color="white" />
@@ -208,6 +224,9 @@ const CameraScreen = () => {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Toast Notification */}
+      <Toast />
     </View>
   );
 };

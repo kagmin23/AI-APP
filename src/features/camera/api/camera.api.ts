@@ -35,7 +35,7 @@ export const getCameraPhotos = async (): Promise<any[]> => {
 };
 
 export const deleteCameraPhoto = async (id: string): Promise<{ message: string }> => {
-  const url = `${API_BASE_URL}/camera/${id}`;
+  const url = `${API_BASE_URL}/camera/delete/${id}`;
   const response = await axios.delete<{ message: string }>(url, {
     withCredentials: true,
   });
