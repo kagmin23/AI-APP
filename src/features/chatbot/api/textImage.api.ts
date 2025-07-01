@@ -3,7 +3,6 @@ import axios from "axios";
 import Constants from "expo-constants";
 
 const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
-
 interface TextToImagePayload {
   prompt: string;
   userId: string;
@@ -26,6 +25,23 @@ interface ImageItem {
 interface GetImageHistoryResponse {
   success: boolean;
   images: ImageItem[];
+}
+interface UpdateImagePayload {
+  prompt: string;
+}
+interface UpdateImageResponse {
+  success: boolean;
+  image: {
+    _id: string;
+    prompt: string;
+    imageUrl: string;
+    imageBase64: string;
+    createdAt: string;
+  };
+}
+interface DeleteImageResponse {
+  success: boolean;
+  message?: string;
 }
 
 const textImage = async (prompt: string): Promise<string> => {
@@ -115,4 +131,37 @@ const getImageHistory = async (): Promise<ImageItem[]> => {
   }
 };
 
-export { getImageHistory, textImage };
+const updateImage = async (id: string, prompt: string): Promise<UpdateImageResponse> => {
+  try {
+    const response = await axios.put<UpdateImageResponse>(
+      `${API_BASE_URL}/chatbotAI/update-image/${id}`,
+      { prompt },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ updateImage error:", error);
+    throw new Error("Failed to update image");
+  }
+};
+
+const deleteImage = async (id: string): Promise<DeleteImageResponse> => {
+  try {
+    const response = await axios.delete<DeleteImageResponse>(
+      `${API_BASE_URL}/chatbotAI/delete-image/${id}`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ deleteImage error:", error);
+    throw new Error("Failed to delete image");
+  }
+};
+
+export { deleteImage, getImageHistory, textImage, updateImage };
+
