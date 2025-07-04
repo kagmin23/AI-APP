@@ -276,6 +276,12 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
   },
+  createdAtText: {
+  fontSize: 10,
+  color: "#a0aec0",
+  marginTop: 4,
+  alignSelf: "flex-end",
+},
 });
 
 export default styles;

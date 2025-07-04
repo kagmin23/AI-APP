@@ -2,29 +2,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Animated, FlatList } from "react-native";
 import Toast from "react-native-toast-message";
 import {
-    deleteMessage,
-    getChatHistory,
-    sendMessage,
-    updateMessage,
+  deleteMessage,
+  getChatHistory,
+  sendMessage,
+  updateMessage,
 } from "../api/textChat.api";
 import {
-    deleteImage,
-    getImageHistory,
-    textImage,
-    updateImage,
+  deleteImage,
+  getImageHistory,
+  textImage,
+  updateImage,
 } from "../api/textImage.api";
 import {
-    ALERT_MESSAGES,
-    LIMITS,
-    TOAST_MESSAGES,
+  ALERT_MESSAGES,
+  LIMITS,
+  TOAST_MESSAGES,
 } from "../constants/chat.constants";
 import { ChatItem } from "../types/chat.types";
 import {
-    combineAndSortHistory,
-    createTempMessage,
-    getErrorMessage,
-    isImagePrompt,
-    processImageResponse,
+  combineAndSortHistory,
+  createTempMessage,
+  getErrorMessage,
+  isImagePrompt,
+  processImageResponse,
 } from "../utils/chat.utils";
 
 export const useToast = () => {
@@ -198,9 +198,7 @@ export const useChatOperations = () => {
         setWaiting(true);
 
         const item = history.find((msg) => msg._id === id);
-        if (!item) {
-          throw new Error("Message not found");
-        }
+        if (!item) throw new Error("Message not found");
 
         if (id.startsWith("temp_")) {
           showToast(
@@ -208,21 +206,14 @@ export const useChatOperations = () => {
             TOAST_MESSAGES.UPDATE_ERROR,
             "You can not edit this message."
           );
-          console.log("temp_", id);
           return;
         }
 
         if (item.type === "image") {
-          const response = await updateImage(id, newPrompt);
-          if (!response.success) {
-            const errorMsg =
-              "error" in response && typeof response.error === "string"
-                ? response.error
-                : "Can not update message";
-            throw new Error(errorMsg);
-          }
+          const result = await updateImage(id, newPrompt);
+          if (!result.success) throw new Error((result as any).error || "Update failed");
 
-          const { image } = response;
+          const { image } = result;
           const finalImageUrl = image.imageBase64
             ? `data:image/jpeg;base64,${image.imageBase64}`
             : image.imageUrl;
@@ -237,9 +228,7 @@ export const useChatOperations = () => {
           showToast("success", TOAST_MESSAGES.REGENERATE_SUCCESS);
         } else {
           const updated = await updateMessage(id, newPrompt);
-          if (!updated) {
-            throw new Error("Can not update message");
-          }
+          if (!updated) throw new Error("Update failed");
 
           updateHistoryItem(id, {
             prompt: updated.prompt,
@@ -250,8 +239,8 @@ export const useChatOperations = () => {
 
           showToast("success", TOAST_MESSAGES.UPDATE_SUCCESS);
         }
-      } catch (error) {
-        showToast("error", TOAST_MESSAGES.UPDATE_ERROR, getErrorMessage(error));
+      } catch (err) {
+        showToast("error", TOAST_MESSAGES.UPDATE_ERROR, getErrorMessage(err));
       } finally {
         setUpdatingId(null);
         setWaiting(false);

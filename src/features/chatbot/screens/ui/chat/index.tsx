@@ -1,21 +1,21 @@
 import { PLACEHOLDER_TEXTS } from "@/features/chatbot/constants/chat.constants";
 import {
-    AIResponseProps,
-    ChatBubbleProps,
-    EditingBubbleProps,
-    NormalBubbleProps,
+  AIResponseProps,
+  ChatBubbleProps,
+  EditingBubbleProps,
+  NormalBubbleProps,
 } from "@/features/chatbot/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import styles from "./styles";
 
@@ -153,6 +153,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
         ) : (
           <NormalBubble item={item} onEdit={onEdit} onDelete={onDelete} />
         )}
+        {item.createdAt && (
+          <Text style={styles.createdAtText}>
+            {new Date(item.createdAt).toLocaleString()}
+          </Text>
+        )}
       </View>
     </View>
 
@@ -172,6 +177,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           typingAnimation={typingAnimation}
           onImageError={onImageError}
         />
+        {item.createdAt && (
+          <Text style={styles.createdAtText}>
+            {new Date(item.createdAt).toLocaleString()}
+          </Text>
+        )}
       </View>
     </View>
   </View>

@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +22,39 @@ import {
   uploadCameraPhoto,
 } from "../../api/camera.api";
 import styles from "./styles";
+
+const PhotoItem = memo(
+  ({
+    item,
+    onPreview,
+    onDelete,
+  }: {
+    item: { _id: string; cameraData: string };
+    onPreview: (uri: string) => void;
+    onDelete: (id: string) => void;
+  }) => (
+    <View style={styles.historyItemWrapper}>
+      <TouchableOpacity onPress={() => onPreview(item.cameraData)}>
+        <Image source={{ uri: item.cameraData }} style={styles.historyImage} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.trashIcon}
+        onPress={() => {
+          Alert.alert("Delete", "Delete this photo?", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => onDelete(item._id),
+            },
+          ]);
+        }}
+      >
+        <FontAwesome name="trash" size={16} color="white" />
+      </TouchableOpacity>
+    </View>
+  )
+);
 
 const CameraScreen = () => {
   const [photo, setPhoto] = useState("");
@@ -62,7 +95,7 @@ const CameraScreen = () => {
     try {
       setLoading(true);
       const result = await ImagePicker.launchCameraAsync({
-        quality: 0.8,
+        quality: 0.5,
         allowsEditing: true,
         aspect: [4, 3],
         cameraType: useFrontCamera
@@ -84,7 +117,7 @@ const CameraScreen = () => {
 
         Toast.show({
           type: "success",
-          text1: "✅ Photo uploaded",
+          text1: "✅ Photo uploaded successfully",
         });
 
         setPhotos((prev) => [
@@ -99,7 +132,6 @@ const CameraScreen = () => {
           if (secondsLeft === 0) {
             clearInterval(interval);
             setCountdown(null);
-
             Animated.timing(fadeAnim, {
               toValue: 0,
               duration: 1000,
@@ -161,8 +193,6 @@ const CameraScreen = () => {
                 source={{ uri: photo }}
                 style={[styles.previewImage, { opacity: fadeAnim }]}
               />
-
-              {/* Countdown nổi giữa ảnh */}
               {countdown !== null && (
                 <View style={styles.overlayDim}>
                   <View style={styles.countdownTextContainer}>
@@ -195,38 +225,22 @@ const CameraScreen = () => {
           data={photos}
           keyExtractor={(item) => item._id}
           horizontal
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 10 }}
           renderItem={({ item }) => (
-            <View style={styles.historyItemWrapper}>
-              <TouchableOpacity onPress={() => handlePreview(item.cameraData)}>
-                <Image
-                  source={{ uri: item.cameraData }}
-                  style={styles.historyImage}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.trashIcon}
-                onPress={() => {
-                  Alert.alert("Delete", "Delete this photo?", [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: () => handleDelete(item._id),
-                    },
-                  ]);
-                }}
-              >
-                <FontAwesome name="trash" size={16} color="white" />
-              </TouchableOpacity>
-            </View>
+            <PhotoItem
+              item={item}
+              onPreview={handlePreview}
+              onDelete={handleDelete}
+            />
           )}
         />
       </View>
 
-      {/* Modal xem ảnh */}
       <Modal visible={previewVisible} transparent={true} animationType="fade">
         <View style={styles.modalBackground}>
           <Image source={{ uri: previewUri }} style={styles.modalImage} />
@@ -239,7 +253,6 @@ const CameraScreen = () => {
         </View>
       </Modal>
 
-      {/* Toast Notification */}
       <Toast />
     </View>
   );
